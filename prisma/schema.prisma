@@ -13,3 +13,109 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  RECRUITER
+  APPLICANT
+}
+
+enum Status{
+  COMPLETED
+  IN_PROGRESS
+  PENDING
+}
+
+enum QuestionType{
+  TEXT
+  MULTIPLE_CHOICE
+  CODING
+}
+
+model User {
+  id          String          @id @default(uuid())
+  userName    String
+  email       String          @unique
+  password    String
+  role        Role?           @default(APPLICANT)
+
+  createdAt   DateTime        @default(now())
+
+  jobs        Job[]           @relation("recruiterJobs")
+  resume      Resume[]
+  interviews  Interview[]
+}
+
+model Job {
+  id          String          @id @default(uuid())
+  title       String
+  description String
+  recruiterId String
+  questionConfig Json?        // e.g., { "TEXT": 3, "CODING": 2 }
+  createdAt   DateTime        @default(now())
+
+  recruiter   User            @relation("recruiterJobs", fields: [recruiterId], references: [id])
+  interviews  Interview[]
+}
+
+model Resume {
+  id          String          @id @default(uuid())
+  userId      String
+  fileUrl     String
+  parsedText  String?
+  analysis    Json?
+
+  createdAt   DateTime        @default(now())
+
+  user        User            @relation(fields: [userId], references: [id])
+  interviews  Interview[]
+}
+
+
+model Interview {
+  id          String          @id @default(uuid())
+  userId      String
+  jobId       String?
+  resumeId    String?
+  status      Status          @default(PENDING)
+
+  user        User            @relation(fields: [userId], references: [id])
+  job         Job?            @relation(fields: [jobId], references: [id])
+  resume      Resume?         @relation(fields: [resumeId], references: [id])
+  questions   Question[]
+  evaluation  Evaluation?
+}
+
+model Question {
+  id           String          @id @default(uuid())
+  interviewId  String
+  text         String
+  type         QuestionType    @default(TEXT)
+  expectedAnswer String?
+  createdAt    DateTime        @default(now())
+
+  interview    Interview       @relation(fields: [interviewId], references: [id])
+  response     Response?
+}
+
+
+model Response {
+  id          String           @id @default(uuid())
+  questionId  String           @unique
+  answerText  String
+  score       Float?
+  feedback    String?
+
+  question    Question         @relation(fields: [questionId], references: [id])
+}
+
+
+model Evaluation {
+  id           String   @id @default(uuid())
+  interviewId  String   @unique
+  totalScore   Float
+  feedback     String
+  categories   Json     // e.g., { "communication": 4, "tech": 3 }
+  createdAt    DateTime @default(now())
+
+  interview    Interview @relation(fields: [interviewId], references: [id])
+}
