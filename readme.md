@@ -1,19 +1,27 @@
 # 🧠 SkillScreener
 
-**AI-powered mock interview and resume analysis platform.**
+**AI-powered mock interview and resume analysis platform with role-based access for recruiters and applicants.**
 
-SkillScreener helps candidates prepare for interviews and assists recruiters in screening applicants by analyzing resumes, generating intelligent interview questions, evaluating responses, and providing detailed performance reports.
+SkillScreener helps **applicants** prepare for interviews through personalized question generation and AI-driven evaluation. It also enables **recruiters** to post job roles, review candidate performance, and manage assessments.
 
 ---
 
 ## 🚀 Features (In Progress)
 
-- Resume upload and smart parsing
-- Role-based interview question generation
-- Answer collection and automatic evaluation
-- Personalized feedback and score reports
-- Candidate and Admin login functionality
+### 👨‍💼 Applicant
+- Sign up & log in
+- Upload resume for AI-based parsing
+- Select role / job to begin interview
+- Answer questions (text/code)
+- Get automated feedback and score report
+
+### 🧑‍💻 Recruiter
+- Sign up & log in
+- Post job roles / positions
+- (Optionally) Create question templates
+- View applicant responses and reports
+- Add manual feedback if needed
 
 ---
 
-*Development in progress — more updates coming soon.*
+*Development in progress — backend structure and core schemas being built.*
