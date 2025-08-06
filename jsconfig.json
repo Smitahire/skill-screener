@@ -1,0 +1,9 @@
+// jsconfig.json
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "baseUrl": "./"
+  },
+  "exclude": ["node_modules"]
+}
