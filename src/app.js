@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import express, { json, urlencoded } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import  prisma from "./database/prisma";
 
@@ -15,6 +16,8 @@ app.use(
   })
 );
 app.use(urlencoded({ extended: true }));
+app.use(cookieParser());
+
 
 // routes
 

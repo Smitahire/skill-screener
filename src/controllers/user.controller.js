@@ -3,8 +3,32 @@ import prisma from "src/database/prisma.js";
 import { ApiError } from "src/utils/ApiError";
 import bcrypt from "bcrypt";
 import { ApiResponse } from "src/utils/ApiResponse";
+import { generateAccessToken, generateRefreshToken } from "src/utils/Tokens";
 
+const options = {
+    httpOnly: true,           
+    secure: true,
+}
 
+const generateAccessAndRefreshToken = async ( user ) => {
+    const accessToken =  generateAccessToken(user)
+    const refreshToken = generateRefreshToken(user)
+
+    if(!accessToken || !refreshToken){
+        throw new ApiError(500, "Cannot generate access and refresh token !!")
+    }
+    
+    await prisma.user.update({
+        where: {
+            id: user.id,
+        },
+        data: {
+            refreshToken: refreshToken,
+        }
+    })
+    
+    return {accessToken,refreshToken}
+}
 
 const registerUser = asyncHandler( async ( req, res ) => {
 
@@ -31,6 +55,13 @@ const registerUser = asyncHandler( async ( req, res ) => {
             email,
             password: hashedPassword,
             role
+        },
+        select: {
+            id: true,
+            userName: true,
+            email: true,
+            role: true,
+            createdAt: true,
         }
     })
 
@@ -47,7 +78,55 @@ const registerUser = asyncHandler( async ( req, res ) => {
 })
 
 const login = asyncHandler( async ( req, res ) => {
+        
+    //get data and check if givrn correctly
+    const { email , password } = req.body
 
+    if(!email || !password){
+        throw new ApiError(400, "Incomplete input, please fill all fields")
+    }
+
+    // get user
+    const user = await prisma.user.findUnique({
+        where: { email },
+        select: {
+            id: true,
+            userName: true,
+            email: true,
+            password: true, // needed for bcrypt
+            role: true,
+            createdAt: true
+        },
+    })
+
+    if(!user){
+        throw new ApiError(404, "user not found")
+    }
+
+    //compare password
+    const isCorrectPass = await bcrypt.compare(password, user.password)
+    if(!isCorrectPass){
+        throw new ApiError(400, "Incorrect password!")
+    }
+
+    // hide password from user 
+    const { password: _pw, ...safeUser } = user;
+
+    // create access and refresh token
+
+    const {accessToken, refreshToken } = await generateAccessAndRefreshToken(user)
+
+    // return response and tokens in cookies
+    return res.status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        new ApiResponse(
+            200,
+            safeUser,
+            "user logged in!"
+        )
+    )
 })
 
 const logout = asyncHandler( async ( req, res ) => {
