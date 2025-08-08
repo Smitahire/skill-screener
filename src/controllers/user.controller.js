@@ -130,5 +130,35 @@ const login = asyncHandler( async ( req, res ) => {
 })
 
 const logout = asyncHandler( async ( req, res ) => {
+    const userID = req.user.id
+
+    const loggedOutUser = await prisma.user.update({
+        where: {
+            id: userID,
+        },
+        data: {
+            refreshToken: null,
+        },
+        select: {
+            userName: true,
+        }
+    })
     
+    return res
+    .clearCookie("accessToken",options)
+    .clearCookie("refreshToken",options)
+    .json(
+        new ApiResponse(
+            200,
+            loggedOutUser,
+            "User Logged out!"
+        )
+    )
+
 })
+
+export {
+    registerUser,
+    login,
+    logout,
+}
