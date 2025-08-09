@@ -1,9 +1,9 @@
-import { asyncHandler } from "src/utils/asyncHandler.js";
-import prisma from "src/database/prisma.js";
-import { ApiError } from "src/utils/ApiError";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import prisma from "../database/prisma.js";
+import { ApiError } from "../utils/ApiError.js";
 import bcrypt from "bcrypt";
-import { ApiResponse } from "src/utils/ApiResponse";
-import { generateAccessToken, generateRefreshToken } from "src/utils/Tokens";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/Tokens.js";
 
 const options = {
     httpOnly: true,           

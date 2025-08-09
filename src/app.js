@@ -4,7 +4,7 @@ import express, { json, urlencoded } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-import  prisma from "./database/prisma";
+import  prisma from "./database/prisma.js";
 
 const app = express();
 
@@ -20,12 +20,12 @@ app.use(cookieParser());
 
 
 // routes
-import userRoutes from "./routes"
+import userRoutes from "./routes/User.router.js"
 
 app.use("/api/v1/user",userRoutes)
 
 
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+app.listen(process.env.PORT, () => {
+    console.log(`Server running on http://localhost:${process.env.PORT}`);
 });

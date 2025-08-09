@@ -1,8 +1,6 @@
 import { Router } from "express";
-import verifyJWT from "src/middlewares/auth.middlewear";
-import { login, logout, registerUser } from "src/controllers/user.controller.js";
-
-
+import {verifyJWT} from "../middlewares/auth.middlewear.js";
+import { login, logout, registerUser } from "../controllers/user.controller.js";
 
 const router = Router();
 

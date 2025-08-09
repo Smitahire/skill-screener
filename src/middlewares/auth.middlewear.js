@@ -1,7 +1,7 @@
-import prisma from "src/database/prisma";
-import { asyncHandler } from "src/utils/asyncHandler";
+import prisma from "../database/prisma.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
-import { ApiError } from "src/utils/ApiError";
+import { ApiError } from "../utils/ApiError.js";
 
 const verifyJWT = asyncHandler( async (req, res, next) => {
 
@@ -30,12 +30,12 @@ const verifyJWT = asyncHandler( async (req, res, next) => {
             throw new ApiError(500, "Invalid access token!")
         }
     
-        res.user = user;
+        req.user = user;
 
         next()
     } catch (error) {
-        console.log("Error : ", error)
+        next(error);
     }
 })
 
-export default verifyJWT
+export {verifyJWT}
