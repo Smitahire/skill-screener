@@ -60,7 +60,7 @@ model Job {
 
 model Resume {
   id          String          @id @default(uuid())
-  userId      String
+  userId      String          @unique
   fileUrl     String
   parsedText  String?
   analysis    Json?
