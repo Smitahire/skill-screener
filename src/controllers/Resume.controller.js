@@ -9,46 +9,25 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-export const uploadResume = asyncHandler(async (req, res) => {
 
+const uploadResume = asyncHandler(async (req, res) => {
     const resumePdfPath = req.files.resumePdf?.[0]?.path;
     const userId = req.user.id;
-
 
     if (!resumePdfPath) {
         throw new ApiError(400, "PDF path not found!");
     }
-
-    // Check if resume already exists for this user
-    const existingResume = await prisma.resume.findUnique({
-        where: { userId },
-    });
-
-
-    // OPTION 1: Throw error if resume exists
-    // if (existingResume) {
-    //     throw new ApiError(400, "You have already uploaded a resume.");
-    // }
-
-
-    // OPTION 2: Delete old resume before adding a new one
-    if (existingResume) {
-        await prisma.resume.delete({ where: { userId } });
-    }
-
 
     // Parse PDF into string
     const pdfBuffer = fs.readFileSync(resumePdfPath);
     const pdfData = await pdfParse(pdfBuffer);
     const parsedText = pdfData.text.trim();
 
-
     // Upload to Cloudinary
     const fileUrl = await uploadOnCloudinary(resumePdfPath);
     if (!fileUrl) {
         throw new ApiError(400, "Resume file not uploaded!");
     }
-
 
     // Prepare AI prompt with strict JSON instruction
     const analysisPrompt = `
@@ -67,15 +46,14 @@ export const uploadResume = asyncHandler(async (req, res) => {
     }
 
     Resume Text:
-    ${parsedText}`;
-
+    ${parsedText}
+    `;
 
     // Call Gemini API
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: analysisPrompt,
     });
-
 
     // Parse JSON safely
     let analysisJson;
@@ -86,26 +64,47 @@ export const uploadResume = asyncHandler(async (req, res) => {
         throw new ApiError(500, "AI response was not valid JSON");
     }
 
-
-    // Save in DB
-    const resume = await prisma.resume.create({
-        data: {
-            userId,
-            fileUrl,
-            parsedText,
-            analysis: analysisJson,
-        },
+    // Check if resume exists
+    const existingResume = await prisma.resume.findUnique({
+        where: { userId },
     });
 
+    let resume;
+    if (existingResume) {
+        // Update existing resume
+        resume = await prisma.resume.update({
+            where: { userId },
+            data: {
+                fileUrl,
+                parsedText,
+                analysis: analysisJson,
+            },
+        });
+    } else {
+        // Create new resume
+        resume = await prisma.resume.create({
+            data: {
+                userId,
+                fileUrl,
+                parsedText,
+                analysis: analysisJson,
+            },
+        });
+    }
 
     res.status(201).json(
         new ApiResponse(
             201,
             resume,
             existingResume
-                ? "Old resume replaced & analyzed successfully"
+                ? "Resume updated & analyzed successfully"
                 : "Resume uploaded & analyzed successfully"
         )
     );
 });
+
+export {
+    uploadResume,
+}
+
 

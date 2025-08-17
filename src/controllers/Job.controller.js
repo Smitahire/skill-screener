@@ -66,15 +66,10 @@ const getJobs = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, jobs));
 });
 
-const applyToJob = asyncHandler( async (req, res) => {
-     
-})
-
-
+// delete job
 
 export { 
     createJob, 
     getMyPostedJobs, 
     getJobs, 
-    applyToJob
 };
