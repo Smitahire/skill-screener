@@ -5,7 +5,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 const createJob = asyncHandler(async (req, res) => {
 
-    const { id: userId, role } = req.user || {};
+    const userId = req.user.id;
+    const role = req.user.role;
 
     if (!userId) {
         throw new ApiError(401, "Unauthorized: Please log in.");

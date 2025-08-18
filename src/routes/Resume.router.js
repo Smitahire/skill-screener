@@ -5,7 +5,7 @@ import { uploadResume } from "../controllers/Resume.controller.js";
 
 const router = Router();
 
-router.route('/upload-resume').post(uploadResume)
+router.route('/upload-resume').post(verifyJWT,uploadResume)
 
 
 export default router

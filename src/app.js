@@ -21,8 +21,12 @@ app.use(cookieParser());
 
 // routes
 import userRoutes from "./routes/User.router.js"
+import jobRoutes from "./routes/Job.router.js"
+import resumeRoutes from "./routes/Resume.router.js"
 
 app.use("/api/v1/user",userRoutes)
+app.use("/api/v1/job",jobRoutes)
+app.use("/api/v1/resume",resumeRoutes)
 
 
 

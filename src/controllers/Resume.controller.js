@@ -1,9 +1,10 @@
 import fs from "fs";
-import pdfParse from "pdf-parse";
-import asyncHandler from "../utils/asyncHandler.js";
-import ApiError from "../utils/ApiError.js";
-import ApiResponse from "../utils/ApiResponse.js";
-import { prisma } from "../prismaClient.js";
+import pdfParse from "pdf-parser";
+
+import prisma from "../database/prisma.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { GoogleGenAI } from "@google/genai";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
