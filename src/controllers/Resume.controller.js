@@ -8,6 +8,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { GoogleGenAI } from "@google/genai";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { log } from "console";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -29,11 +30,13 @@ const uploadResume = asyncHandler(async (req, res) => {
     const pdfData = await pdf(pdfBuffer);
     const parsedText = pdfData.text.trim();
 
-    // Upload to Cloudinary
+
     const fileUrl = await uploadOnCloudinary(resumePdfPath);
     if (!fileUrl) {
         throw new ApiError(400, "Resume file not uploaded!");
     }
+    console.log("file url:" , fileUrl);
+    
 
     // Prepare AI prompt with strict JSON instruction
     const analysisPrompt = `
@@ -55,35 +58,35 @@ const uploadResume = asyncHandler(async (req, res) => {
     ${parsedText}
     `;
 
-    // Call Gemini API
+    // Gemini API
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: analysisPrompt,
     });
-    console.log(response.text);
-
-    // Parse JSON safely
+    
+    
+    // Parse JSON
     let analysisJson;
     try {
-        let rawText = response.text;
+        let rawText = response.candidates[0].content.parts[0].text;
+        rawText = rawText.replace(/(^```(json)?\s*|\s*```$)/g, '').trim();
         analysisJson = JSON.parse(rawText);
     } catch (err) {
-        console.error("AI raw response:", response.text());
+        console.error("AI raw response:", response.candidates[0].content.parts[0].text);
         throw new ApiError(500, "AI response was not valid JSON");
     }
 
-    // Check if resume exists
     const existingResume = await prisma.resume.findUnique({
         where: { userId },
     });
 
     let resume;
     if (existingResume) {
-        // Update existing resume
+        // Update resume if resume alredy exist
         resume = await prisma.resume.update({
             where: { userId },
             data: {
-                fileUrl,
+                fileUrl: fileUrl.url,
                 parsedText,
                 analysis: analysisJson,
             },
@@ -93,7 +96,7 @@ const uploadResume = asyncHandler(async (req, res) => {
         resume = await prisma.resume.create({
             data: {
                 userId,
-                fileUrl,
+                fileUrl: fileUrl.url,
                 parsedText,
                 analysis: analysisJson,
             },
