@@ -1,5 +1,6 @@
 import fs from "fs";
-import pdfParse from "pdf-parser";
+import pdf from "pdf-parse";
+import path from "path";
 
 import prisma from "../database/prisma.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -12,16 +13,20 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 
 const uploadResume = asyncHandler(async (req, res) => {
-    const resumePdfPath = req.files.resumePdf?.[0]?.path;
+    const resumePdfPath = req.file?.path;
     const userId = req.user.id;
+    const role = req.user.role;
+
+    if(role == "RECRUITER") throw new ApiError(400, "Only APPLICANT can upload resume!");
 
     if (!resumePdfPath) {
         throw new ApiError(400, "PDF path not found!");
     }
 
     // Parse PDF into string
+
     const pdfBuffer = fs.readFileSync(resumePdfPath);
-    const pdfData = await pdfParse(pdfBuffer);
+    const pdfData = await pdf(pdfBuffer);
     const parsedText = pdfData.text.trim();
 
     // Upload to Cloudinary
@@ -55,13 +60,15 @@ const uploadResume = asyncHandler(async (req, res) => {
         model: "gemini-2.5-flash",
         contents: analysisPrompt,
     });
+    console.log(response.text);
 
     // Parse JSON safely
     let analysisJson;
     try {
-        const rawText = response.text().trim();
+        let rawText = response.text;
         analysisJson = JSON.parse(rawText);
     } catch (err) {
+        console.error("AI raw response:", response.text());
         throw new ApiError(500, "AI response was not valid JSON");
     }
 
