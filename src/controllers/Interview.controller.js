@@ -180,7 +180,7 @@ const submitAnswer = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, updated, "Answer submitted successfully"));
 });
 
-const evaluateAnswer = asyncHandler( async ( req, res )=> {
+const evaluateAnswers = asyncHandler( async ( req, res )=> {
     const { interviewId } = req.body;
     const userId = req.user?.id;
 
@@ -253,4 +253,6 @@ const evaluateAnswer = asyncHandler( async ( req, res )=> {
 export {
     generateInterview,
     generateQuestionsForAnswer,
+    submitAnswer,
+    evaluateAnswers,
 }
