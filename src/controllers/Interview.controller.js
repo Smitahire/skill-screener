@@ -148,3 +148,109 @@ const generateQuestionsForAnswer = asyncHandler( async ( req, res )=> {
     .json(new ApiResponse(200, updatedInterview, "Questions generated successfully"));
 
 })
+
+const submitAnswer = asyncHandler(async (req, res) => {
+    const { answerId, answerText } = req.body;
+    const userId = req.user?.id;
+
+    if (!answerId || !answerText) {
+        throw new ApiError(400, "Missing answerId or answerText");
+    }
+
+    // find answer and check ownership
+    const answer = await prisma.answer.findUnique({
+        where: { id: answerId },
+        include: { interview: true },
+    });
+
+    if (!answer) throw new ApiError(404, "Answer not found");
+
+    if (answer.interview.userId !== userId) {
+        throw new ApiError(403, "You cannot answer someone else's interview");
+    }
+
+    // update answer text
+    const updated = await prisma.answer.update({
+        where: { id: answerId },
+        data: { answerText },
+    });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updated, "Answer submitted successfully"));
+});
+
+const evaluateAnswer = asyncHandler( async ( req, res )=> {
+    const { interviewId } = req.body;
+    const userId = req.user?.id;
+
+    if (!interviewId) throw new ApiError(400, "Missing interviewId");
+
+    const interview = await prisma.interview.findUnique({
+        where: { id: interviewId },
+        include: { answers: true },
+    });
+
+    if (!interview) throw new ApiError(404, "Interview not found");
+    if (interview.userId !== userId) throw new ApiError(403, "Not your interview");
+
+    // prepare Q&A pairs (answers table already has both question & answerText)
+    const qaPairs = interview.answers.map(a => ({
+        answerId: a.id,
+        text: a.text,                // question text
+        expectedAnswer: a.expectedAnswer,
+        answerText: a.answerText || "",
+    }));
+
+    // build prompt for AI
+    const prompt = `
+        You are an experienced technical interviewer. 
+        Your task: evaluate each candidate's answer compared to the expected answer. 
+        Scoring must be between 0 and 10 (0 = completely incorrect, 10 = perfect). 
+        Provide clear and constructive feedback in 1-3 sentences.
+
+        Output must be valid JSON only, in this exact format:
+        [
+        {
+            "answerId": "string",
+            "score": number,
+            "feedback": "string"
+        }
+        ]
+
+        Here is the Q&A data to evaluate:
+        ${JSON.stringify(qaPairs, null, 2)}
+    `;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+    });
+
+    let evaluations;
+    try {
+        let raw = response.candidates[0].content.parts[0].text;
+        raw = raw.replace(/(^```(json)?\s*|\s*```$)/g, '').trim();
+        evaluations = JSON.parse(raw);
+    } catch (err) {
+        throw new ApiError(500, "AI response parsing failed");
+    }
+
+
+    // update answers with scores + feedback
+    for (const ev of evaluations) {
+        await prisma.answer.update({
+        where: { id: ev.answerId },
+        data: {
+            score: ev.score,
+            feedback: ev.feedback,
+        },
+        });
+    }
+
+})
+
+export {
+    generateInterview,
+    generateQuestionsForAnswer,
+}
