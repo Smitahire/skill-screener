@@ -7,6 +7,8 @@ import { createJob, getJobs, getMyPostedJobs } from "../controllers/Job.controll
 const router = Router();
 
 router.route('/create-job').post(verifyJWT,createJob)
+
+// user endpoint
 router.route('/get-jobs').get(getJobs)
 
 //recruiter dashbord

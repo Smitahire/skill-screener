@@ -250,9 +250,98 @@ const evaluateAnswers = asyncHandler( async ( req, res )=> {
 
 })
 
+
+const finalEvaluation = asyncHandler(async (req, res) => {
+    const { interviewId } = req.body;
+    const userId = req.user?.id;
+
+    if (!interviewId) throw new ApiError(400, "Missing interviewId");
+
+    // fetch interview + answers
+    const interview = await prisma.interview.findUnique({
+        where: { id: interviewId },
+        include: { answers: true },
+    });
+
+    if (!interview) throw new ApiError(404, "Interview not found");
+    if (interview.userId !== userId) throw new ApiError(403, "Not your interview");
+
+    if (interview.answers.length === 0) {
+        throw new ApiError(400, "No answers found for this interview");
+    }
+
+    // Prepare data for AI
+    const qaPairs = interview.answers.map(a => ({
+        text: a.text,
+        expectedAnswer: a.expectedAnswer,
+        answerText: a.answerText || "",
+        score: a.score ?? null,
+        feedback: a.feedback ?? null,
+        type: a.type
+    }));
+
+    const prompt = `
+        You are an experienced recruiter.
+        Your task: create a FINAL evaluation for the candidate based on all answers.
+
+        - Compute a totalScore out of 100.
+        (Scale from the individual 0-10 scores already provided).
+        - Provide 4-6 sentence constructive feedback summarizing candidate's performance.
+        - Provide a JSON object with categories breakdown 
+        (e.g., { "technical": 70, "communication": 85, "problemSolving": 60 }).
+
+        Interview Q&A data:
+        ${JSON.stringify(qaPairs, null, 2)}
+
+        Return ONLY valid JSON in this format:
+        {
+        "totalScore": number,
+        "feedback": "string",
+        "categories": {
+            "technical": number,
+            "communication": number,
+            "problemSolving": number
+        }
+        }
+    `;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+    });
+
+    let evaluation;
+    try {
+        let raw = response.candidates[0].content.parts[0].text;
+        raw = raw.replace(/(^```(json)?\s*|\s*```$)/g, '').trim();
+        evaluation = JSON.parse(raw);
+    } catch (err) {
+        console.error("AI Final Evaluation Error:", err);
+        throw new ApiError(500, "AI response parsing failed");
+    }
+
+    // update Interview table
+    const updatedInterview = await prisma.interview.update({
+        where: { id: interviewId },
+        data: {
+        totalScore: evaluation.totalScore,
+        feedback: evaluation.feedback,
+        categories: evaluation.categories,
+        status: "COMPLETED",
+        },
+        include: { answers: true },
+    });
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updatedInterview, "Final evaluation completed"));
+});
+
+
 export {
     generateInterview,
     generateQuestionsForAnswer,
     submitAnswer,
     evaluateAnswers,
+    finalEvaluation,
 }
